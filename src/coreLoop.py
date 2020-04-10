@@ -7,8 +7,8 @@ class ArduinoCode:
     nitrogenDensity = 1.225; # in units of g/L
     channelArea = 58.0; # area of the three channels in the D-lite
     dischargeCoefficient = 0.7; # estimate from the literature
-    conversionFactor = 0.594; # converts mm^2 * sqrt(cmH2O * g/L) into L/min
-    mbarTocmWater = 1.1097;
+    conversionFactor = 0.5941712; # converts mm^2 * sqrt(cmH2O * g/L) into L/min
+    mbarTocmWater = 1.019716;
 
     samplingTimeMillis = 5;
     averagingTimeMillis = 200;
@@ -95,7 +95,7 @@ class ArduinoCode:
 
     def updatePressureAndFlow(self):
         self.pressureInt = self.readPressureBytes();
-        self.pressure = (((self.pressureInt-1638)*120)/(14745-1638)-60) * self.mbarTocmWater;
+        self.pressure = self.pressureFromSerial(self.pressureInt)
         self.tempInt = self.readTempBytes();
         self.temp = ((self.tempInt/2047)*200)-50;
 
@@ -108,13 +108,16 @@ class ArduinoCode:
     def readTempBytes(self):
         return 0;
 
+    def pressureFromSerial(self, serialData):
+        return (((serialData - 1638)*120)/(14745-1638) - 60) * self.mbarTocmWater
+
     def flowFromPressure(self, pressure):
-        flow = 0.0;
         if (pressure < 0):
-            flow = -self.conversionFactor * self.dischargeCoefficient * self.channelArea * sqrt(-2 * self.pressure / self.nitrogenDensity);
+            return -self.conversionFactor * self.dischargeCoefficient * self.channelArea * sqrt(-2 * pressure / self.nitrogenDensity);
+        elif (pressure > 0):
+            return self.conversionFactor * self.dischargeCoefficient * self.channelArea * sqrt(2 * pressure / self.nitrogenDensity);
         else:
-            flow = self.conversionFactor * self.dischargeCoefficient * self.channelArea * sqrt(2 * self.pressure / self.nitrogenDensity);
-        return flow;
+            return 0
 
     # AUXILIARY FUNCTIONS UNIQUE TO THIS CLASS NOT MIRRORED IN THE ARDUINO FOR EASE OF USE
     def runCoreLoop(self):
@@ -139,5 +142,5 @@ class ArduinoCode:
 
     # computes honeywell serial for a given flow
     def flowToHoneywellSerial(self, flowLmin):
-        return int(107.113 *(76.4752 + 0.00210504 * flowLmin * flowLmin))
+        return int(107.113 (76.4752 + 0.00105252 *flow * flow))
 
