@@ -132,6 +132,7 @@ void updateState() {
       nextState = EXHALATION;
     }
   }
+  state = nextState;
 }
 
 void resetCounters() {

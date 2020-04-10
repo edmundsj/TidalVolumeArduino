@@ -46,6 +46,12 @@ class ArduinoCode:
     temp = 0.0;
     addedTidalVolume = 0.0;
 
+    def runCoreLoop(self):
+        self.updatePressureAndFlow()
+        self.updateTidalVolume()
+        self.updateState()
+        self.resetCounters()
+
     def updateState(self):
         self.nextState = self.state; # by default, stay in the same state.
         if(self.state == self.INHALATION):
@@ -62,7 +68,7 @@ class ArduinoCode:
                 self.nextState = self.INHALATION;
 
         elif(self.state == self.EXHALATION):
-            if(self.flow> self.upwardThreshold):
+            if(self.flow > self.upwardThreshold):
                 self.nextState = self.TRANSITION_TO_INHALATION;
                 self.tidalVolumeInhalation = 0; # reset tidal volume. Can save old tidal volume now.
                 self.thresholdCounter = 0;
@@ -74,6 +80,8 @@ class ArduinoCode:
                   self.nextState = self.INHALATION;
             elif(self.flow<= self.upwardStayAbove): # we didn't stay above the threshold.
                 self.nextState = self.EXHALATION;
+
+        self.state = self.nextState
 
     def updateTidalVolume(self):
         # ACTIONS TO TAKE BASED ONLY ON CURRENT STATE
@@ -119,12 +127,6 @@ class ArduinoCode:
         else:
             return 0
 
-    # AUXILIARY FUNCTIONS UNIQUE TO THIS CLASS NOT MIRRORED IN THE ARDUINO FOR EASE OF USE
-    def runCoreLoop(self):
-        self.updatePressureAndFlow()
-        self.updateTidalVolume()
-        self.updateState()
-        self.resetCounters()
 
     def stateToString(self):
         if(self.state == self.INHALATION):
@@ -142,5 +144,5 @@ class ArduinoCode:
 
     # computes honeywell serial for a given flow
     def flowToHoneywellSerial(self, flowLmin):
-        return int(107.113 (76.4752 + 0.00105252 *flow * flow))
+        return int(107.113 *(76.4752 + 0.00105252 * flowLmin * flowLmin))
 
