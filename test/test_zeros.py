@@ -11,13 +11,15 @@ class TestZeros(unittest.TestCase):
     def setUp(self):
         self.arduino = ArduinoCode()
         self.totalTime = 0;
+        self.honeywellZero = self.arduino.pressureToHoneywellSerial(0);
+        self.honeywell30Lmin = self.arduino.flowToHoneywellSerial(30);
 
     # Verify that we never change the state from its initial value when we feed in nothing but zeros
     def testZeros(self):
-        self.arduino.readPressureBytes = Mock(return_value = 0)
+        self.arduino.readPressureBytes = Mock(return_value = self.honeywellZero)
         self.arduino.readTempBytes = Mock(return_value = 0)
 
-        while self.totalTime <= 1000: # Run the test for 1 second
+        while self.totalTime <= 100: # Run the test for 1 second
             # increment the time artificially by our sampling time
             # Verify that we never change the state from its initial value
             self.assertEqual(self.arduino.state, self.arduino.EXHALATION);
@@ -27,8 +29,10 @@ class TestZeros(unittest.TestCase):
 
     def testUnitStep(self):
         stepOnset = 51; # set the step onset to 51ms
-        stepReturnValues = [50*np.heaviside(time - stepOnset, 1) for time in \
-                range(0,1000,self.arduino.samplingTimeMillis)]
+        stepReturnValues = [self.honeywellZero for time in range(0, 50, self.arduino.samplingTimeMillis)]
+        stepReturnValues += [self.honeywell30Lmin for time in range(50 + self.arduino.samplingTimeMillis,
+            100, self.arduino.samplingTimeMillis)]
+
         print(stepReturnValues)
 
         self.arduino.readPressureBytes = Mock(side_effect= stepReturnValues)
@@ -36,8 +40,9 @@ class TestZeros(unittest.TestCase):
         while self.totalTime <= 500:
             self.arduino.runCoreLoop()
             print(f'time: {self.totalTime}')
-            print(f'pressure: {self.arduino.pressureAverage}')
-            print(f'flow: {self.arduino.flowAverage}')
+            print(f'serial: {self.arduino.pressureInt}')
+            print(f'pressure: {self.arduino.pressure}')
+            print(f'flow: {self.arduino.flow}')
             print(f'state: {self.arduino.stateToString()}')
             if(self.totalTime < stepOnset):
                 self.assertEqual(self.arduino.state, self.arduino.EXHALATION)

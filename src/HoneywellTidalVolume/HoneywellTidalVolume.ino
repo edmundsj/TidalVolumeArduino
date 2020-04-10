@@ -64,11 +64,15 @@ void loop() {
 void updatePressureAndFlow() {
   // put your main code here, to run repeatedly:
   pressureInt = readPressureBytes();
-  pressure = (((pressureInt-1638)*(120))/(14745-1638)-60) * mbarTocmWater;
+  pressure = pressureFromSerial(pressureInt);
   tempInt = readTempBytes();
   temp = ((tempInt/2047)*200)-50;
   
   flow = flowFromPressure(pressure);
+}
+
+float pressureFromSerial(int serialData) {
+  return (((serialData-1638)*(120))/(14745-1638)-60) * mbarTocmWater;
 }
 
 void updateTidalVolume() {
