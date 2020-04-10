@@ -14,10 +14,7 @@ class ArduinoCode:
     averagingTimeMillis = 200;
     averagingSamples = int(averagingTimeMillis / samplingTimeMillis);
 
-    totalPressure = 0.0;
-    pressureAverage = 0.0;
-    readings = [0 for i in range(averagingSamples)]
-    flowAverage = 0.0;
+    flow= 0.0;
     tidalVolumeInhalation = 0.0;
     tidalVolumeExhalation = 0.0;
     currentlyInhaling = False;
@@ -52,35 +49,35 @@ class ArduinoCode:
     def updateState(self):
         self.nextState = self.state; # by default, stay in the same state.
         if(self.state == self.INHALATION):
-            if(self.flowAverage < self.downwardThreshold):
+            if(self.flow< self.downwardThreshold):
                 self.nextState = self.TRANSITION_TO_EXHALATION;
                 self.tidalVolumeExhalation = 0;
                 self.thresholdCounter = 0;
         elif(self.state == self.TRANSITION_TO_EXHALATION):
-            if(self.flowAverage < self.downwardStayBelow):
+            if(self.flow< self.downwardStayBelow):
                 self.thresholdCounter += 1;
                 if(self.thresholdCounter >= self.minimumExhalationCounter):
                     self.nextState = self.EXHALATION;
-            elif(self.flowAverage >= self.downwardStayBelow): # we didn't stay below the threshold.
+            elif(self.flow>= self.downwardStayBelow): # we didn't stay below the threshold.
                 self.nextState = self.INHALATION;
 
         elif(self.state == self.EXHALATION):
-            if(self.flowAverage > self.upwardThreshold):
+            if(self.flow> self.upwardThreshold):
                 self.nextState = self.TRANSITION_TO_INHALATION;
                 self.tidalVolumeInhalation = 0; # reset tidal volume. Can save old tidal volume now.
                 self.thresholdCounter = 0;
 
         elif(self.state == self.TRANSITION_TO_INHALATION):
-            if(self.flowAverage > self.upwardStayAbove):
+            if(self.flow> self.upwardStayAbove):
                 self.thresholdCounter += 1;
                 if(self.thresholdCounter >= self.minimumInhalationCounter):
                   self.nextState = self.INHALATION;
-            elif(self.flowAverage <= self.upwardStayAbove): # we didn't stay above the threshold.
+            elif(self.flow<= self.upwardStayAbove): # we didn't stay above the threshold.
                 self.nextState = self.EXHALATION;
 
     def updateTidalVolume(self):
         # ACTIONS TO TAKE BASED ONLY ON CURRENT STATE
-        self.addedTidalVolume = self.flowAverage * self.samplingTimeMillis / 1000.0;
+        self.addedTidalVolume = self.flow* self.samplingTimeMillis / 1000.0;
         if(self.state == self.INHALATION):
             self.tidalVolumeInhalation += self.addedTidalVolume;
         elif(self.state == self.TRANSITION_TO_EXHALATION):
@@ -97,17 +94,12 @@ class ArduinoCode:
         self.timeElapsed = 0;
 
     def updatePressureAndFlow(self):
-        self.totalPressure = self.totalPressure - self.readings[self.readIndex];
-        # put your main code here, to run repeatedly:
-        pressureInt = self.readPressureBytes();
-        pressure = (((pressureInt-1638)*120)/(14745-1638)-60 ) * self.mbarTocmWater;
-        tempInt = self.readTempBytes();
-        temp = ((tempInt/2047)*200)-50;
+        self.pressureInt = self.readPressureBytes();
+        self.pressure = (((self.pressureInt-1638)*120)/(14745-1638)-60) * self.mbarTocmWater;
+        self.tempInt = self.readTempBytes();
+        self.temp = ((self.tempInt/2047)*200)-50;
 
-        self.readings[self.readIndex] = pressure;
-        self.totalPressure = self.totalPressure + self.readings[self.readIndex];
-        self.pressureAverage = self.totalPressure / self.averagingSamples;
-        self.flowAverage = self.flowFromPressure(self.pressureAverage);
+        self.flow = self.flowFromPressure(self.pressure);
 
     # This is strictly intended to be mocked, although we could grab real serial data
     def readPressureBytes(self):
@@ -124,6 +116,7 @@ class ArduinoCode:
             flow = self.conversionFactor * self.dischargeCoefficient * self.channelArea * sqrt(2 * self.pressure / self.nitrogenDensity);
         return flow;
 
+    # AUXILIARY FUNCTIONS UNIQUE TO THIS CLASS NOT MIRRORED IN THE ARDUINO FOR EASE OF USE
     def runCoreLoop(self):
         self.updatePressureAndFlow()
         self.updateTidalVolume()
@@ -139,3 +132,12 @@ class ArduinoCode:
             return 'TRANSITION_TO_INHALATION'
         elif(self.state == self.TRANSITION_TO_EXHALATION):
             return 'TRANSITION_TO_EXHALATION'
+
+    # computes the pressure from given honeywell serial
+    def pressureToHoneywellSerial(self, pressureCmWater):
+        return int(107.113*(76.4752 + pressureCmWater))
+
+    # computes honeywell serial for a given flow
+    def flowToHoneywellSerial(self, flowLmin):
+        return int(107.113 *(76.4752 + 0.00210504 * flowLmin * flowLmin))
+

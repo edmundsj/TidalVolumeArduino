@@ -8,22 +8,16 @@ const float nitrogenDensity = 1.225; // in units of g/L
 const float channelArea = 58.0; // area of the three channels in the D-lite
 const float dischargeCoefficient = 0.7; // estimate from the literature
 const float conversionFactor = 0.594; // converts mm^2 * sqrt(cmH2O * g/L) into L/min
-const float mbarTocmWater = 1.1097;
+const float mbarTocmWater = 1.019716;
 
 const uint16_t samplingTimeMillis = 5;
 const uint16_t averagingTimeMillis = 200;
 const uint16_t averagingSamples = int(averagingTimeMillis / samplingTimeMillis);
 
-float totalPressure = 0;
-float pressureAverage = 0;
-float readings[averagingSamples];
-float flowAverage = 0;
+float flow = 0;
 float tidalVolumeInhalation = 0;
 float tidalVolumeExhalation = 0;
 bool currentlyInhaling = false;
-
-uint16_t readIndex = 0;
-uint16_t bufferIndex = 0;
 
 const uint8_t INHALATION = 0;
 const uint8_t EXHALATION = 1;
@@ -68,24 +62,17 @@ void loop() {
 }
 
 void updatePressureAndFlow() {
-  totalPressure = totalPressure - readings[readIndex];
   // put your main code here, to run repeatedly:
   pressureInt = readPressureBytes();
   pressure = (((pressureInt-1638)*(120))/(14745-1638)-60) * mbarTocmWater;
   tempInt = readTempBytes();
   temp = ((tempInt/2047)*200)-50;
   
-  readings[readIndex] = pressure;
-  
-
-  // compute the running average (lowpass filter the data)
-  totalPressure = totalPressure + readings[readIndex];
-  pressureAverage = totalPressure / averagingSamples;
-  flowAverage = flowFromPressure(pressureAverage);
+  flow = flowFromPressure(pressure);
 }
 
 void updateTidalVolume() {
-  addedTidalVolume = flowAverage * samplingTimeMillis / 1000.0;
+  addedTidalVolume = flow * samplingTimeMillis / 1000.0;
   // ACTIONS TO TAKE BASED ONLY ON CURRENT STATE
   if(state == INHALATION) {
     tidalVolumeInhalation += addedTidalVolume;
@@ -105,52 +92,46 @@ void updateState() {
   // STATE TRANSITION LOGIC AND VARIABLE RESETTING
   nextState = state; // by default, stay in the same state.
   if(state == INHALATION) {
-    if(flowAverage < downwardThreshold) {
+    if(flow < downwardThreshold) {
       nextState = TRANSITION_TO_EXHALATION;
       tidalVolumeExhalation = 0;
       thresholdCounter = 0;
     }
   }
   else if(state == TRANSITION_TO_EXHALATION) {
-    if(flowAverage < downwardStayBelow) {
+    if(flow < downwardStayBelow) {
       thresholdCounter += 1;
       
       if(thresholdCounter >= minimumExhalationCounter) {
         nextState = EXHALATION;
       }
     }
-    else if(flowAverage >= downwardStayBelow) { // we didn't stay below the threshold. 
+    else if(flow >= downwardStayBelow) { // we didn't stay below the threshold. 
       nextState = INHALATION;
     }
   }
   else if(state == EXHALATION) {
-    if(flowAverage > upwardThreshold) {
+    if(flow > upwardThreshold) {
       nextState = TRANSITION_TO_INHALATION;
       tidalVolumeInhalation = 0; // reset tidal volume. Can save old tidal volume now.
       thresholdCounter = 0;
     }
   }
   else if(state == TRANSITION_TO_INHALATION) {
-    if(flowAverage > upwardStayAbove) {
+    if(flow > upwardStayAbove) {
       thresholdCounter += 1;
       if(thresholdCounter >= minimumInhalationCounter) {
         nextState = INHALATION;
       }
     }
-    else if(flowAverage <= upwardStayAbove) { // we didn't stay above the threshold.
+    else if(flow <= upwardStayAbove) { // we didn't stay above the threshold.
       nextState = EXHALATION;
     }
   }
 }
 
 void resetCounters() {
-   readIndex += 1;
     timeElapsed = 0;
-    
-    // RESET COUNTERS AND ELAPSED TIME
-    if (readIndex >= averagingSamples ) {
-      readIndex = 0;
-    }
 }
 
 double flowFromPressure(double pressure) {
