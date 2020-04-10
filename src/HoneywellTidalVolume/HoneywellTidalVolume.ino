@@ -7,7 +7,7 @@ const int numReadings = 2;
 const float nitrogenDensity = 1.225; // in units of g/L
 const float channelArea = 58.0; // area of the three channels in the D-lite
 const float dischargeCoefficient = 0.7; // estimate from the literature
-const float conversionFactor = 0.594; // converts mm^2 * sqrt(cmH2O * g/L) into L/min
+const float conversionFactor = 0.5941712; // converts mm^2 * sqrt(cmH2O * g/L) into L/min
 const float mbarTocmWater = 1.019716;
 
 const uint16_t samplingTimeMillis = 5;
