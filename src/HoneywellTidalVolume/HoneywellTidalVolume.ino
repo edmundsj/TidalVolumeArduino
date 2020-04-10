@@ -71,7 +71,7 @@ void updatePressureAndFlow() {
   totalPressure = totalPressure - readings[readIndex];
   // put your main code here, to run repeatedly:
   pressureInt = readPressureBytes();
-  pressure = ((pressureInt-1638)*(120))/(14745-1638)-60;
+  pressure = (((pressureInt-1638)*(120))/(14745-1638)-60) * mbarTocmWater;
   tempInt = readTempBytes();
   temp = ((tempInt/2047)*200)-50;
   
@@ -80,7 +80,7 @@ void updatePressureAndFlow() {
 
   // compute the running average (lowpass filter the data)
   totalPressure = totalPressure + readings[readIndex];
-  pressureAverage = totalPressure / averagingSamples * mbarTocmWater;
+  pressureAverage = totalPressure / averagingSamples;
   flowAverage = flowFromPressure(pressureAverage);
 }
 

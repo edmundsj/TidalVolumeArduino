@@ -100,13 +100,13 @@ class ArduinoCode:
         self.totalPressure = self.totalPressure - self.readings[self.readIndex];
         # put your main code here, to run repeatedly:
         pressureInt = self.readPressureBytes();
-        pressure = ((pressureInt-1638)*120)/(14745-1638)-60;
+        pressure = (((pressureInt-1638)*120)/(14745-1638)-60 ) * self.mbarTocmWater;
         tempInt = self.readTempBytes();
         temp = ((tempInt/2047)*200)-50;
 
         self.readings[self.readIndex] = pressure;
         self.totalPressure = self.totalPressure + self.readings[self.readIndex];
-        self.pressureAverage = self.totalPressure / self.averagingSamples * self.mbarTocmWater;
+        self.pressureAverage = self.totalPressure / self.averagingSamples;
         self.flowAverage = self.flowFromPressure(self.pressureAverage);
 
     # This is strictly intended to be mocked, although we could grab real serial data
