@@ -2,6 +2,7 @@
 #include <elapsedMillis.h> // NOTE - NOT AN OFFICIAL LIBRARY. WE SHOULD IDEALLY USE INTERRUPTS.
 
 elapsedMillis timeElapsed;
+elapsedMillis displayTimeElapsed;
 const int numReadings = 2;
 
 const float nitrogenDensity = 1.225; // in units of g/L
@@ -13,6 +14,7 @@ const float mbarTocmWater = 1.019716;
 const uint16_t samplingTimeMillis = 5;
 const uint16_t averagingTimeMillis = 200;
 const uint16_t averagingSamples = int(averagingTimeMillis / samplingTimeMillis);
+const uint16_t displayTimeMillis = 50;
 
 float flow = 0;
 float tidalVolumeInhalation = 0;
@@ -23,11 +25,12 @@ const uint8_t INHALATION = 0;
 const uint8_t EXHALATION = 1;
 const uint8_t TRANSITION_TO_EXHALATION = 2;
 const uint8_t TRANSITION_TO_INHALATION = 3;
+const uint8_t NO_ACTIVITY = 4;
 
-float upwardThreshold = 15; // threshold in L/min
-float upwardStayAbove = 10; // threshold we must stay above
-float downwardThreshold = 5; // threshold we must cross going down to exit the breath
-float downwardStayBelow = 5; // threshold we must stay below to be considered an exhalation
+float upwardThreshold = 5; // threshold in L/min
+float upwardStayAbove = 5; // threshold we must stay above
+float downwardThreshold = -5; // threshold we must cross going down to exit the breath
+float downwardStayBelow = -5; // threshold we must stay below to be considered an exhalation
 float minimumInhalationMillis = 200; // check that our breath time is at least 200ms
 float minimumExhalationMillis = 200; // check that our breath time is at least 200ms
 uint16_t minimumInhalationCounter = uint16_t(minimumInhalationMillis / samplingTimeMillis);
@@ -37,7 +40,7 @@ uint8_t state = EXHALATION;
 uint8_t nextState = EXHALATION;
 uint8_t thresholdCounter = 0; 
 
-float pressureInt = 0;
+float serial = 0;
 float pressure = 0;
 float tempInt = 0;
 float temp = 0;
@@ -55,16 +58,18 @@ void loop() {
   if(timeElapsed > samplingTimeMillis) {
     updatePressureAndFlow();
     updateState();
-    updateTidalVolume();
+    updateTidalVolume(); // this needs to come after updateState so the volume gets added to the right bin
     resetCounters();
+    //Serial.println("S" + String(pressure) + " " + String(flow) + 
+    //  " " + String(tidalVolumeInhalation) + " " + String(tidalVolumeExhalation));
   }
   
 }
 
 void updatePressureAndFlow() {
   // put your main code here, to run repeatedly:
-  pressureInt = readPressureBytes();
-  pressure = pressureFromSerial(pressureInt);
+  serial = readPressureBytes();
+  pressure = pressureFromSerial(serial);
   tempInt = readTempBytes();
   temp = ((tempInt/2047)*200)-50;
   
@@ -72,7 +77,8 @@ void updatePressureAndFlow() {
 }
 
 float pressureFromSerial(int serialData) {
-  return (((serialData-1638)*(120))/(14745-1638)-60) * mbarTocmWater;
+  float pressureFromSerial = (((float(serialData)-1638.0)*(120.0))/(14745.0-1638.0)-60.0) * mbarTocmWater;
+  return pressureFromSerial;
 }
 
 void updateTidalVolume() {
