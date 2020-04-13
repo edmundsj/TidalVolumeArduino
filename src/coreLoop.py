@@ -27,10 +27,10 @@ class ArduinoCode:
     TRANSITION_TO_EXHALATION = 2;
     TRANSITION_TO_INHALATION = 3;
 
-    upwardThreshold = 15.0; # threshold in L/min
-    upwardStayAbove = 10.0; # threshold we must stay above
-    downwardThreshold = 5.0; # threshold we must cross going down to exit the breath
-    downwardStayBelow = 5.0; # threshold we must stay below to be considered an exhalation
+    upwardThreshold = 10.0; # threshold in L/min
+    upwardStayAbove = 8.0; # threshold we must stay above
+    downwardThreshold = 0.0; # threshold we must cross going down to exit the breath
+    downwardStayBelow = 0.0; # threshold we must stay below to be considered an exhalation
     minimumInhalationMillis = 200.0; # check that our breath time is at least 200ms
     minimumExhalationMillis = 200.0; # check that our breath time is at least 200ms
     minimumInhalationCounter = int(minimumInhalationMillis / samplingTimeMillis);
@@ -48,8 +48,8 @@ class ArduinoCode:
 
     def runCoreLoop(self):
         self.updatePressureAndFlow()
-        self.updateTidalVolume()
         self.updateState()
+        self.updateTidalVolume()
         self.resetCounters()
 
     def updateState(self):
@@ -85,14 +85,14 @@ class ArduinoCode:
 
     def updateTidalVolume(self):
         # ACTIONS TO TAKE BASED ONLY ON CURRENT STATE
-        self.addedTidalVolume = self.flow* self.samplingTimeMillis / 1000.0;
+        self.addedTidalVolume = self.flow / 60.0 * self.samplingTimeMillis / 1000.0;
         if(self.state == self.INHALATION):
             self.tidalVolumeInhalation += self.addedTidalVolume;
-        elif(self.state == self.TRANSITION_TO_EXHALATION):
+        elif(self.state == self.TRANSITION_TO_INHALATION):
             self.tidalVolumeInhalation += self.addedTidalVolume;
         elif(self.state == self.EXHALATION):
             self.tidalVolumeExhalation += self.addedTidalVolume;
-        elif(self.state == self.TRANSITION_TO_INHALATION):
+        elif(self.state == self.TRANSITION_TO_EXHALATION):
             self.tidalVolumeExhalation += self.addedTidalVolume;
 
     def resetCounters(self):
@@ -102,8 +102,8 @@ class ArduinoCode:
         self.timeElapsed = 0;
 
     def updatePressureAndFlow(self):
-        self.pressureInt = self.readPressureBytes();
-        self.pressure = self.pressureFromSerial(self.pressureInt)
+        self.serial = self.readPressureBytes();
+        self.pressure = self.pressureFromSerial(self.serial)
         self.tempInt = self.readTempBytes();
         self.temp = ((self.tempInt/2047)*200)-50;
 
@@ -144,5 +144,12 @@ class ArduinoCode:
 
     # computes honeywell serial for a given flow
     def flowToHoneywellSerial(self, flowLmin):
-        return int(107.113 *(76.4752 + 0.00105252 * flowLmin * flowLmin))
+        if(flowLmin > 0):
+            return int(107.113 *(76.4752 + 0.00105252 * flowLmin * flowLmin))
+        elif(flowLmin < 0):
+            return int(107.113 *(76.4752 - 0.00105252 * flowLmin * flowLmin))
+
+    def honeywellSerialToFlow(self, serial):
+        pressure = self.pressureFromSerial(serial)
+        return self.flowFromPressure(pressure)
 

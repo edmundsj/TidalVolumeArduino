@@ -54,8 +54,8 @@ void setup() {
 void loop() {
   if(timeElapsed > samplingTimeMillis) {
     updatePressureAndFlow();
-    updateTidalVolume();
     updateState();
+    updateTidalVolume();
     resetCounters();
   }
   
@@ -76,18 +76,18 @@ float pressureFromSerial(int serialData) {
 }
 
 void updateTidalVolume() {
-  addedTidalVolume = flow * samplingTimeMillis / 1000.0;
+  addedTidalVolume = flow / 60.0 * samplingTimeMillis / 1000.0;
   // ACTIONS TO TAKE BASED ONLY ON CURRENT STATE
   if(state == INHALATION) {
     tidalVolumeInhalation += addedTidalVolume;
   }
-  else if(state == TRANSITION_TO_EXHALATION) {
+  else if(state == TRANSITION_TO_INHALATION) {
     tidalVolumeInhalation += addedTidalVolume;
   }
   else if(state == EXHALATION) {
     tidalVolumeExhalation += addedTidalVolume;
   }
-  else if(state == TRANSITION_TO_INHALATION) {
+  else if(state == TRANSITION_TO_EXHALATION) {
     tidalVolumeExhalation += addedTidalVolume;
   }
 }

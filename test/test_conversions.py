@@ -4,7 +4,7 @@ sys.path.append('src')
 from coreLoop import ArduinoCode
 import numpy as np
 
-class TestConversionFunctions(unittest.TestCase):
+class TestConversionFunctionsHoneywell(unittest.TestCase):
     def setUp(self):
         self.arduino = ArduinoCode()
 
