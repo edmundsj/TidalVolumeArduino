@@ -66,5 +66,7 @@ class ArduinoParser():
 
                     self.timestamps.append(timestamp)
                     self.flows = np.append(self.flows, splitData[1])
-                    self.tidalVolumes = np.append(self.tidalVolumes, splitData[2])
-                    self.minuteVolumes = np.append(self.minuteVolumes, splitData[3])
+                    # add tidal volumes and minute volumes w/ correction factor to account for
+                    # using the wrong delta t
+                    self.tidalVolumes = np.append(self.tidalVolumes*6.0009/5.0, splitData[2])
+                    self.minuteVolumes = np.append(self.minuteVolumes*6.0009/5.0, splitData[3])
