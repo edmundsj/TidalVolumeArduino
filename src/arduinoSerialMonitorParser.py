@@ -21,7 +21,7 @@ class ArduinoParser():
             self.lines = textFile.readlines()
 
     def writeFile(self, filename):
-        totalData = np.transpose(np.array([self.seconds, self.flows]))
+        totalData = np.transpose(np.array([self.seconds, self.flows, self.tidalVolumes, self.minuteVolumes]))
         np.savetxt(filename, totalData, fmt='%f', delimiter=',')
 
     # Directly converts timestamps into times
