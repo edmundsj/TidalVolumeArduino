@@ -13,6 +13,8 @@ class ArduinoParser():
         self.seconds = np.array([])
         self.duration = 0
         self.fs = 0
+        self.tidalVolumes = np.array([])
+        self.minuteVolumes = np.array([])
 
     def readFile(self, filename):
         with open(filename) as textFile:
@@ -64,3 +66,5 @@ class ArduinoParser():
 
                     self.timestamps.append(timestamp)
                     self.flows = np.append(self.flows, splitData[1])
+                    self.tidalVolumes = np.append(self.tidalVolumes, splitData[2])
+                    self.minuteVolumes = np.append(self.minuteVolumes, splitData[3])
