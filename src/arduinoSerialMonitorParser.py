@@ -15,6 +15,9 @@ class ArduinoParser():
         self.fs = 0
         self.tidalVolumes = np.array([])
         self.minuteVolumes = np.array([])
+        actualSamplingTime = 6.0009
+        usedSamplingTime = 5.0;
+        self.correctionFactor = actualSamplingTime / usedSamplingTime
 
     def readFile(self, filename):
         with open(filename) as textFile:
@@ -68,5 +71,5 @@ class ArduinoParser():
                     self.flows = np.append(self.flows, splitData[1])
                     # add tidal volumes and minute volumes w/ correction factor to account for
                     # using the wrong delta t
-                    self.tidalVolumes = np.append(self.tidalVolumes*6.0009/5.0, splitData[2])
-                    self.minuteVolumes = np.append(self.minuteVolumes*6.0009/5.0, splitData[3])
+                    self.tidalVolumes = np.append(self.tidalVolumes, splitData[2]*self.correctionFactor)
+                    self.minuteVolumes = np.append(self.minuteVolumes, splitData[3]*self.correctionFactor)
