@@ -2,11 +2,19 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+import json
 from copy import deepcopy
 
 # Class that takes the dictionary we generate as an input and does stuff to it
 class Breaths:
-    def __init__(self, inputDict):
+    def __init__(self, inputFileName):
+        ##This code loads the array from jason file and casts lists as numpy arrays.
+        # We probably want to move this somewhere else 
+        with open(fname) as json_file:
+            inputDict = json.load(json_file)
+            for key,value in inputDict.items():
+                if isinstance(value, list):
+                    inputDict[key] = np.array(value)
         time = inputDict['time']
         flow = inputDict['flow']
         flowData = xr.DataArray(flow, coords=[time], dims=['time'])

@@ -1,6 +1,7 @@
 import sys
 import re
 import numpy as np
+import json
 from dateutil.parser import parse as parseDate
 sys.path.append('raw_data')
 
@@ -26,7 +27,18 @@ class ArduinoParser():
     def writeFile(self, filename):
         totalData = np.transpose(np.array([self.seconds, self.flows, self.tidalVolumes, self.minuteVolumes]))
         np.savetxt(filename, totalData, fmt='%f', delimiter=',')
-
+    def inputMetadata(self, metadata):
+        """ add data to dictionary with keys 'targetFlowRate', 'leftPressure', 'rightPressure', 'leftTidalVolume', 'rightTidalVolume', 'compliance'
+        """
+        self.metadata = metadata
+    def writeJSONFile(self, filename):
+        dictionary = {}
+        dictionary['time'] = self.seconds.tolist()
+        dictionary['flow'] = self.flows.tolist()
+        dictionary['tidalVolume'] = self.tidalVolumes.tolist()
+        dictionary.update(self.metadata)
+        with open(filename, 'w') as fp:
+            json.dump(dictionary, fp)
     # Directly converts timestamps into times
     def convertToRelativeTimes(self):
         startingTime = self.timestamps[0]
@@ -56,13 +68,13 @@ class ArduinoParser():
         for line in self.lines:
             line = line.replace(",", "")
             timestampMatch = re.search(timestampPattern, line)
-            if isinstance(timestampMatch, re.Match):
+            if timestampMatch:
                 timestampString = timestampMatch.group()
                 timestamp = parseDate(timestampString)
                 timestamp = timestamp.replace(year=1940, month=1, day=1)
 
                 data = re.search(dataPattern, line)
-                if isinstance(data, re.Match):
+                if data:
                     dataString = data.group()
                     dataNoHeader = dataString.replace(headerPattern, "")
                     splitData = [float(measurement) for measurement in dataNoHeader.split(delimiter)]
